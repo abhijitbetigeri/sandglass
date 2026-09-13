@@ -434,12 +434,12 @@
   ];
 
   var BENIGN = [
-    {a:"fs.read",     t:"/workspace/state.json",   r:"mounted ReadOnly"},
+    {a:"fs.read",     t:"/workspace/state.json",   r:"in seeded workspace"},
     {a:"proc.spawn",  t:"python /workspace/agent.py", r:"package present"},
-    {a:"fs.write",    t:"/workspace/out/plan.json",r:"workspace is ReadWrite"},
+    {a:"fs.write",    t:"/workspace/out/plan.json",r:"workspace is writable"},
     {a:"pkg.install", t:"jsonschema",              r:"in role allowlist"},
     {a:"sign",        t:"telemetry-batch",         r:"policy match"},
-    {a:"fs.read",     t:"/workspace/topology.yml", r:"mounted ReadOnly"},
+    {a:"fs.read",     t:"/workspace/topology.yml", r:"in seeded workspace"},
     {a:"proc.spawn",  t:"node /workspace/check.js",r:"package present"}
   ];
 
@@ -729,6 +729,13 @@
   rows.sort(function(){ return 0; });
   renderStream(false); renderNodes(); renderQuorum(); renderKpis(); renderTargets();
   select(rows[0]);
+
+  /* deep links: ?scenario=compromise|partition|lockout — used by the demo capture */
+  var qs = new URLSearchParams(location.search).get("scenario");
+  if(qs === "compromise") setMode("compromise", $("s-comp"));
+  else if(qs === "partition") setMode("partition", $("s-part"));
+  else if(qs === "lockout") setMode("lockout", $("s-lock"));
+  if(new URLSearchParams(location.search).get("still") === "1") paused = true;
 
   /* ---------- loops ---------- */
   setInterval(function(){

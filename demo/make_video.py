@@ -117,6 +117,16 @@ SCENES = [
      "It tries to fire the breaker, and to move money. Denied, and denied. "
      "The breaker never moves."),
 
+    ("shot", {
+        "file": "console_compromise.png",
+        "cap": "sandglass.wasmer.app/console — one pane, every decision",
+        "note": "Wasmer gives you isolation but no visibility. This is the layer that was missing.",
+    },
+     "Every one of those decisions is emitted by the host, not self-reported by the agent, "
+     "so a hijacked agent can neither forge a line nor hide one. Wasmer gives you isolation "
+     "but no visibility. This is the layer that was missing: one pane showing what every "
+     "sandbox in the fleet tried to do, and exactly which capability stopped it."),
+
     ("term", {
         "cmd": "$ python -m sandglass.host --role operator --quorum --lockout breaker-B",
         "lines": [
@@ -136,6 +146,15 @@ SCENES = [
      "breaker. The local node does not know that. Its peers do. The agent holds a "
      "legitimate capability, and it still gets nothing, because all five peers refuse "
      "to sign. Quorum zero of three. The crew keeps working."),
+
+    ("shot", {
+        "file": "console_lockout.png",
+        "cap": "Safety lockout — quorum stalls at 0 of 3",
+        "note": "The breaker stays CLOSED. The audit chain still reads verified.",
+    },
+     "The console shows the same thing from the operator's side. Quorum stalled at zero of "
+     "three, the breaker still closed, and the hash chain still verified. An administrator "
+     "sees the attempt, the reason, and the state of the hardware in one place."),
 
     ("table", {
         "head": "Measured, not claimed",
@@ -168,10 +187,11 @@ def chrome(draw, title="sandglass — edge node"):
     draw.text((250, 168), title, font=F_LABEL, fill=DIM)
 
 
-def brand(draw):
+def brand(draw, subtitle=True):
     draw.text((120, H - 92), "SANDGLASS", font=F_LABEL, fill=SAND)
-    draw.text((280, H - 92), "capability control plane for agents at the edge",
-              font=F_LABEL, fill=DIM)
+    if subtitle:
+        draw.text((280, H - 92), "capability control plane for agents at the edge",
+                  font=F_LABEL, fill=DIM)
 
 
 def render(kind, payload, reveal):
@@ -204,6 +224,19 @@ def render(kind, payload, reveal):
                 d.text((164, y), txt, font=F_MONO_S, fill=col)
             y += 44
 
+    elif kind == "shot":
+        shot = Image.open(OUT / "shots" / payload["file"]).convert("RGB")
+        top, max_w, max_h = 150, W - 180, 790          # leave room for cap + note + brand
+        scale = min(max_w / shot.width, max_h / shot.height)
+        tw, th = int(shot.width * scale), int(shot.height * scale)
+        shot = shot.resize((tw, th), Image.LANCZOS)
+        x = (W - tw) // 2
+        d.rectangle([x - 2, top - 2, x + tw + 1, top + th + 1], outline=LINE, width=2)
+        img.paste(shot, (x, top))
+        d.text((x, 96), payload["cap"], font=F_MONO_S, fill=SAND)
+        if payload.get("note"):
+            d.text((x, top + th + 24), payload["note"], font=F_LABEL, fill=DIM)
+
     elif kind == "table":
         d.text((160, 180), payload["head"], font=F_H, fill=TEXT)
         d.line([160, 258, 560, 258], fill=SAND, width=3)
@@ -215,7 +248,7 @@ def render(kind, payload, reveal):
                 d.line([164, y + 54, W - 164, y + 54], fill=LINE, width=1)
             y += 96
 
-    brand(d)
+    brand(d, subtitle=(kind != "shot"))
     return img
 
 
@@ -243,6 +276,8 @@ def main():
 
         n_items = len(payload.get("items") or payload.get("lines")
                       or payload.get("rows") or [1])
+        if kind == "shot":
+            n_items = 1
         steps = max(1, n_items)
         # reveal over the first 55% of the scene, then hold
         per = (dur * 0.55) / steps

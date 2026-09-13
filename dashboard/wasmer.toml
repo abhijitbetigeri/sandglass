@@ -1,6 +1,6 @@
 [package]
 name = "abhijitbetigeri/sandglass"
-version = "0.1.1"
+version = "0.1.2"
 description = "Sandglass — admin console for Wasmer sandbox fleets"
 license = "MIT"
 
