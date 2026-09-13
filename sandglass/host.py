@@ -41,18 +41,20 @@ class Host:
         common = dict(role=self.role, agent=req.get("agent", "guest"),
                       action=action, target=target)
 
-        if not self.manifest.allows(self.role, action):
-            e = self.audit.append(decision="DENY",
-                                  reason=self.manifest.deny_reason(self.role, action), **common)
+        if not self.manifest.allows(self.role, action, target):
+            e = self.audit.append(
+                decision="DENY",
+                reason=self.manifest.deny_reason(self.role, action, target), **common)
             return {"action": action, "decision": "DENY", "reason": e.reason}
 
         if self.manifest.is_irreversible(action):
             signers = await self.quorum.collect(req) if self.quorum else []
             have, need = len(signers), self.manifest.threshold
             if have < need:
+                detail = self.quorum.explain() if self.quorum else "no committee configured"
                 e = self.audit.append(
                     decision="HELD", quorum=f"{have}/{need}", signers=signers,
-                    reason="irreversible action held — quorum not reached", **common)
+                    reason=f"irreversible action held at {have}/{need} — {detail}", **common)
                 return {"action": action, "decision": "HELD", "reason": e.reason}
             result = self.effector.apply(action, target)
             self.audit.append(decision="ALLOW", quorum=f"{have}/{need}", signers=signers,
@@ -116,10 +118,27 @@ def main():
     ap.add_argument("--scenario", choices=["benign", "attack"], default="attack")
     ap.add_argument("--turns", type=int, default=1)
     ap.add_argument("--audit", default=None)
+    ap.add_argument("--quorum", action="store_true",
+                    help="enable the 5-node committee (Boundary 2)")
+    ap.add_argument("--lockout", default=None,
+                    help="set a safety tag on a target; peers refuse to sign for it")
+    ap.add_argument("--partition", default="",
+                    help="comma-separated peer ids to mark unreachable")
     args = ap.parse_args()
 
     manifest = Manifest.load(args.manifest)
-    host = Host(args.node, args.role, manifest, Effector(), audit_path=args.audit)
+
+    committee = None
+    if args.quorum:
+        from . import quorum as q
+        committee = q.build(manifest, manifest.committee_size, manifest.threshold)
+        if args.lockout:
+            committee.lockout(args.lockout)
+        if args.partition:
+            committee.partition(*[p.strip() for p in args.partition.split(",") if p.strip()])
+
+    host = Host(args.node, args.role, manifest, Effector(),
+                quorum=committee, audit_path=args.audit)
     print(f"manifest v{manifest.version} ({manifest.digest()})  node={args.node} "
           f"role={args.role} scenario={args.scenario}")
     print(f"sandbox spec: {json.dumps(host.spec.as_create_kwargs())[:200]}\n")

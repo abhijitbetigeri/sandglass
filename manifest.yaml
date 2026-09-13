@@ -1,7 +1,7 @@
 # Sandglass capability manifest.
 # Signed and version-monotonic: a node refuses to apply a manifest whose
 # version is lower than the one it currently holds (rollback defense).
-version: 12
+version: 13
 issuer: sandglass-root
 committee_threshold: 3
 committee_size: 5
@@ -21,11 +21,17 @@ actions:
   pkg.install:    { irreversible: false }
   sign:           { irreversible: false }
   net.connect:    { irreversible: false }
+  git.push:       { irreversible: false }
   grid.actuate:   { irreversible: true }
   funds.transfer: { irreversible: true }
   deploy.push:    { irreversible: true }
 
 # role -> capability set. Resolves directly into Wasmer.create_sandbox().
+#
+# Capabilities are scoped by ACTION *and* RESOURCE. `fs.read` on its own is not
+# a capability; `fs.read` over `workspace/**` is. A role that may read its own
+# workspace still cannot read a key path.
+#
 # `seed` is the ONLY filesystem the guest ever sees; there is no host mount.
 # `network: false` leaves NetworkPolicy.DISABLED, under which socket() fails.
 roles:
@@ -34,25 +40,55 @@ roles:
     network: false
     seed:
       "state.json": '{"breaker-B":"CLOSED","breaker-C":"OPEN"}'
-    allow: [fs.read, fs.write, proc.spawn, sign, grid.actuate]
+    allow:
+      fs.read:      ["state.json", "workspace/**", "/workspace/**"]
+      fs.write:     ["workspace/**", "/workspace/**"]
+      proc.spawn:   ["python*", "node*"]
+      sign:         "*"
+      grid.actuate: ["breaker-B", "breaker-C"]
+    approve:
+      grid.actuate: ["breaker-*"]
 
   supervisor:
     packages: ["python/python"]
     network: false
     seed:
       "state.json": '{"breaker-B":"CLOSED","breaker-C":"OPEN"}'
-    allow: [fs.read, sign]
+    allow:
+      fs.read: ["state.json", "workspace/**", "/workspace/**"]
+      sign:    "*"
+    approve:
+      grid.actuate:   ["breaker-*"]
+      funds.transfer: "*"
+      deploy.push:    "*"
 
-  # Deliberately minimal: a monitor may look, and nothing else.
+  # Deliberately minimal: a monitor may look at its own workspace, nothing else.
   monitor:
     packages: ["python/python"]
     network: false
-    allow: [fs.read]
+    allow:
+      fs.read: ["state.json", "workspace/**", "/workspace/**"]
 
-  # A coding agent: its repo, its runtime, the registry. Nothing else.
+  field:
+    packages: ["python/python"]
+    network: false
+    allow:
+      fs.read: ["state.json", "workspace/**", "/workspace/**"]
+      sign:    "*"
+    approve:
+      grid.actuate: ["breaker-*"]
+
+  # A coding agent. It may work its repo and open a PR branch. It may not
+  # deploy, and it may not push to main.
   builder:
     packages: ["python/python"]
     network: host
     seed:
       "README.md": "# service under maintenance by the builder agent\n"
-    allow: [fs.read, fs.write, proc.spawn, pkg.install]
+    allow:
+      fs.read:    ["repo/**", "workspace/**", "/workspace/**", "README.md"]
+      fs.write:   ["repo/**", "workspace/**", "/workspace/**"]
+      proc.spawn: ["npm*", "node*", "python*"]
+      pkg.install: "*"
+      git.push:   ["refs/heads/agent/*"]
+      # deploy.push deliberately absent — the agent can ask, never do.
