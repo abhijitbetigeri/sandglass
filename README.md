@@ -11,11 +11,32 @@ network and no keys mounted, so it **cannot act — only request**. A host proce
 every request against a signed capability manifest, and irreversible actions
 additionally require 3-of-5 peer signatures. All enforced locally, offline.
 
-**[sandglass.wasmer.app](https://sandglass.wasmer.app)** — landing page and 1:49 demo video
-· **[/console](https://sandglass.wasmer.app/console/)** — live admin console
-· hosted on Wasmer Edge
-
 Built for the AI Security Hackathon, San Francisco, 13 September 2026.
+
+---
+
+## Demo
+
+[![Watch the demo](https://sandglass.wasmer.app/poster.png)](https://sandglass.wasmer.app/sandglass-demo.mp4)
+
+▶ **[Watch the 1:49 demo with voiceover](https://sandglass.wasmer.app/sandglass-demo.mp4)**
+
+Every terminal frame in it is real output from the running system, not a mockup.
+
+| | |
+|---|---|
+| **Landing page + embedded video** | **[sandglass.wasmer.app](https://sandglass.wasmer.app)** |
+| **Demo video** (1:49, voiceover, 3.5 MB) | [sandglass.wasmer.app/sandglass-demo.mp4](https://sandglass.wasmer.app/sandglass-demo.mp4) |
+| **Live admin console** | [sandglass.wasmer.app/console](https://sandglass.wasmer.app/console/) |
+| **Source** | [github.com/abhijitbetigeri/sandglass](https://github.com/abhijitbetigeri/sandglass) |
+
+All of it is hosted on **Wasmer Edge**. The video also lives in this repo at
+[`demo/sandglass-demo.mp4`](demo/sandglass-demo.mp4) and is rebuildable with
+`python demo/make_video.py`.
+
+What the video covers, in order: the problem, the three boundaries, a hijacked agent
+being denied everything it tries, the safety-lockout case that a sandbox alone cannot
+solve, and the measured numbers.
 
 ---
 
