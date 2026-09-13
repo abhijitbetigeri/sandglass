@@ -1,5 +1,8 @@
 wasmer-sdk      # Boundary 1: the capability sandbox around every agent
 tenki           # the edge fleet: disposable microVMs we can partition and kill
-agentmail       # audit + command transport across intermittent links
 pyyaml
 pynacl          # Ed25519 for the committee quorum signatures
+
+# optional — planned: ship the audit chain to a base station over
+# intermittent links, and carry commands back. Not wired yet.
+agentmail

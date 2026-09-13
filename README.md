@@ -212,6 +212,9 @@ Corrections found while building, against the published docs:
 
 ## Honest limitations
 
+- The audit chain is written and verified **locally only**. Shipping it off the device
+  is the next piece: AgentMail store-and-forward to a base station, which suits a node
+  that is offline most of the time. Designed, not yet wired.
 - Peer keys are derived from a fixed demo seed. A real deployment provisions them at
   commissioning and never lets the private half leave the device.
 - The manifest carries a version and is rollback-resistant, but is not yet signature-verified

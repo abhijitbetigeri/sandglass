@@ -3,6 +3,10 @@
 Every entry links to the previous one, so a compromised node cannot rewrite
 its own history without breaking the chain. Entries are written by the HOST,
 never by the agent, so a hijacked guest can neither forge nor suppress a line.
+
+Scope: this writes and verifies the chain LOCALLY. Shipping it off the device —
+gossip to peers, or store-and-forward to a base station over an intermittent
+link — is designed but not implemented.
 """
 from __future__ import annotations
 
