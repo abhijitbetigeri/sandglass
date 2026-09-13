@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>*{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Sandglass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    /* dark-committed console: warm-slate neutrals, sand brand, semantic-only saturation */
+    --ground:#0F1216;
+    --surface:#161A20;
+    --surface-2:#1D222A;
+    --surface-3:#242A33;
+    --line:#2C333D;
+    --line-soft:#212730;
+    --text:#E9E6DF;
+    --muted:#8E9299;
+    --muted-2:#6B6F77;
+    --sand:#D6C4A6;          /* brand + interactive, desaturated on purpose */
+    --sand-dim:#8A7C66;
+    --allow:#3FBE8C;
+    --deny:#F0595F;
+    --held:#E9A93E;
+    --offline:#79828E;
+    --radius:4px;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --ui:"Archivo",system-ui,-apple-system,sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--ground);color:var(--text);
+    font-family:var(--ui);font-size:13px;line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--sand);outline-offset:2px}
+
+  .app{display:grid;grid-template-rows:auto 1fr;height:100dvh;min-height:640px}
+
+  /* ---------- top strip ---------- */
+  .topbar{
+    display:flex;align-items:stretch;gap:0;
+    background:var(--surface);border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+  }
+  .brand{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 20px;border-right:1px solid var(--line);
+  }
+  .glyph{
+    width:22px;height:22px;flex:none;display:block;
+  }
+  .brand h1{
+    margin:0;font-size:16px;font-weight:700;letter-spacing:-0.01em;
+  }
+  .brand .sub{
+    font-family:var(--mono);font-size:10px;color:var(--muted-2);
+    text-transform:uppercase;letter-spacing:.09em;margin-top:1px;
+  }
+
+  .kpis{display:flex;flex:1;min-width:0;overflow-x:auto}
+  .kpi{
+    padding:12px 20px;border-right:1px solid var(--line-soft);
+    display:flex;flex-direction:column;gap:3px;min-width:132px;flex:none;
+  }
+  .kpi .k{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted-2);
+  }
+  .kpi .v{
+    font-family:var(--mono);font-size:17px;font-weight:500;
+    font-variant-numeric:tabular-nums;letter-spacing:-0.01em;
+  }
+  .kpi .v small{font-size:11px;color:var(--muted);font-weight:400}
+  .kpi.alarm .v{color:var(--deny)}
+  .spark{display:block;margin-top:2px}
+
+  .scenarios{
+    display:flex;align-items:center;gap:8px;padding:12px 20px;
+    border-left:1px solid var(--line);margin-left:auto;
+  }
+  .scenarios .lbl{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted-2);margin-right:2px;
+  }
+  .sbtn{
+    background:var(--surface-2);border:1px solid var(--line);
+    border-radius:var(--radius);padding:6px 11px;cursor:pointer;
+    font-size:12px;color:var(--muted);transition:background .15s,color .15s,border-color .15s;
+  }
+  .sbtn:hover{background:var(--surface-3);color:var(--text)}
+  .sbtn[aria-pressed="true"]{
+    background:var(--sand);border-color:var(--sand);color:#15181C;font-weight:600;
+  }
+  .sbtn.danger[aria-pressed="true"]{background:var(--deny);border-color:var(--deny);color:#fff}
+
+  /* ---------- main grid ---------- */
+  .grid{
+    display:grid;grid-template-columns:236px minmax(0,1fr) 300px;
+    min-height:0;
+  }
+  .pane{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .rail{border-right:1px solid var(--line);background:var(--surface)}
+  .detail{border-left:1px solid var(--line);background:var(--surface)}
+
+  .pane-h{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:11px 16px;border-bottom:1px solid var(--line-soft);flex:none;
+  }
+  .pane-h h2{
+    margin:0;font-family:var(--mono);font-size:9.5px;font-weight:500;
+    letter-spacing:.11em;text-transform:uppercase;color:var(--muted-2);
+  }
+  .pane-b{overflow-y:auto;min-height:0;flex:1}
+
+  /* ---------- node cards ---------- */
+  .nodes{display:flex;flex-direction:column}
+  .node{
+    display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:10px;
+    padding:11px 16px 11px 8px;border-bottom:1px solid var(--line-soft);
+    cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;
+    text-align:left;width:100%;transition:background .15s;
+  }
+  .node:hover{background:var(--surface-2)}
+  .node[aria-pressed="true"]{background:var(--surface-3)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--allow)}
+  .node.warn .dot{background:var(--deny)}
+  .node.part .dot{background:var(--offline)}
+  .node.quar .dot{background:var(--held)}
+  .node .nm{font-family:var(--mono);font-size:12px}
+  .node .rl{font-size:10.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.06em}
+  .node .ct{
+    font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;
+    color:var(--muted-2);text-align:right;
+  }
+  .node.warn .ct{color:var(--deny);font-weight:600}
+  .node .st{
+    font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+    color:var(--offline);text-transform:uppercase;
+  }
+
+  .railnote{
+    padding:12px 16px;font-size:11px;color:var(--muted-2);line-height:1.5;
+    border-top:1px solid var(--line-soft);
+  }
+  .railnote b{color:var(--muted);font-weight:600}
+
+  /* ---------- quorum ---------- */
+  .q{padding:11px 16px;border-bottom:1px solid var(--line-soft);display:grid;gap:7px}
+  .q .qt{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .q .qn{font-family:var(--mono);font-size:11.5px}
+  .q .qc{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .bar{display:flex;gap:3px}
+  .bar i{height:4px;flex:1;border-radius:2px;background:var(--surface-3)}
+  .bar i.on{background:var(--allow)}
+  .q.stalled .bar i.on{background:var(--held)}
+  .q.stalled .qc{color:var(--held)}
+  .qempty{padding:16px;color:var(--muted-2);font-size:11.5px}
+
+  /* ---------- stream ---------- */
+  .filters{display:flex;gap:6px}
+  .chip{
+    background:none;border:1px solid var(--line);border-radius:99px;
+    padding:3px 10px;font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+    color:var(--muted-2);cursor:pointer;text-transform:uppercase;
+  }
+  .chip:hover{color:var(--text);border-color:var(--muted-2)}
+  .chip[aria-pressed="true"]{background:var(--surface-3);color:var(--text);border-color:var(--muted-2)}
+
+  .streamwrap{overflow:auto;min-height:0;flex:1}
+  table{border-collapse:collapse;width:100%;min-width:760px}
+  thead th{
+    position:sticky;top:0;z-index:1;background:var(--ground);
+    font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted-2);text-align:left;
+    padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  tbody tr{
+    cursor:pointer;border-bottom:1px solid var(--line-soft);
+    border-left:3px solid transparent;
+  }
+  tbody tr:hover{background:var(--surface)}
+  tbody tr[aria-selected="true"]{background:var(--surface-2)}
+  tbody tr.deny{border-left-color:var(--deny)}
+  tbody tr.held{border-left-color:var(--held)}
+  tbody tr.allow{border-left-color:transparent}
+  td{
+    padding:7px 12px;font-family:var(--mono);font-size:11.5px;
+    font-variant-numeric:tabular-nums;vertical-align:top;
+  }
+  td.t{color:var(--muted-2);white-space:nowrap}
+  td.n{color:var(--muted);white-space:nowrap}
+  td.a{color:var(--text);white-space:nowrap}
+  td.a em{font-style:normal;color:var(--muted)}
+  td.r{color:var(--muted-2);width:40%}
+  .tag{
+    display:inline-block;padding:1px 7px;border-radius:2px;
+    font-size:9.5px;font-weight:600;letter-spacing:.08em;
+  }
+  .tag.ALLOW{background:rgba(63,190,140,.13);color:var(--allow)}
+  .tag.DENY{background:rgba(240,89,95,.15);color:var(--deny)}
+  .tag.HELD{background:rgba(233,169,62,.15);color:var(--held)}
+  @media (prefers-reduced-motion:no-preference){
+    tbody tr.fresh{animation:slide .28s ease-out}
+    @keyframes slide{from{background:var(--surface-3)}to{background:transparent}}
+  }
+
+  .alert{
+    display:none;align-items:center;gap:10px;padding:9px 16px;
+    background:rgba(240,89,95,.11);border-bottom:1px solid rgba(240,89,95,.3);
+    font-size:12px;color:var(--deny);flex:none;
+  }
+  .alert.on{display:flex}
+  .alert b{font-weight:600}
+  .alert .who{font-family:var(--mono)}
+
+  /* ---------- detail ---------- */
+  .d-sec{padding:13px 16px;border-bottom:1px solid var(--line-soft);display:grid;gap:9px}
+  .d-title{font-family:var(--mono);font-size:12.5px;line-height:1.4;word-break:break-word}
+  .kv{display:grid;grid-template-columns:82px 1fr;gap:4px 10px;font-size:11.5px}
+  .kv dt{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted-2);padding-top:2px;
+  }
+  .kv dd{margin:0;font-family:var(--mono);font-size:11.5px;color:var(--text);word-break:break-word}
+  .kv dd.dim{color:var(--muted)}
+
+  .caps{
+    background:var(--ground);border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:10px 12px;font-family:var(--mono);font-size:11px;line-height:1.65;
+    overflow-x:auto;
+  }
+  .caps .key{color:var(--sand-dim)}
+  .caps .off{color:var(--deny)}
+  .caps .on{color:var(--allow)}
+  .caps .cm{color:var(--muted-2)}
+
+  .targets{display:grid;gap:1px;background:var(--line-soft)}
+  .tg{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 16px;background:var(--surface);
+  }
+  .tg .tn{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .tg .tv{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em}
+  .tg .tv.closed{color:var(--allow)}
+  .tg .tv.open{color:var(--held)}
+
+  .acts{display:flex;gap:8px;padding:13px 16px}
+  .abtn{
+    flex:1;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:var(--radius);padding:7px 10px;cursor:pointer;font-size:11.5px;
+    color:var(--muted);transition:background .15s,color .15s,border-color .15s;
+  }
+  .abtn:hover{background:var(--surface-3);color:var(--text);border-color:var(--muted-2)}
+  .abtn.crit:hover{background:rgba(240,89,95,.14);border-color:var(--deny);color:var(--deny)}
+
+  .chain{
+    display:flex;align-items:center;gap:7px;padding:11px 16px;
+    font-family:var(--mono);font-size:11px;color:var(--allow);
+    border-top:1px solid var(--line-soft);
+  }
+  .chain .sq{color:var(--muted-2)}
+
+  @media (max-width:1180px){
+    .grid{grid-template-columns:210px minmax(0,1fr)}
+    .detail{display:none}
+  }
+  @media (max-width:860px){
+    .app{height:auto}
+    .grid{grid-template-columns:minmax(0,1fr)}
+    .rail{border-right:0;border-bottom:1px solid var(--line)}
+    .streamwrap{max-height:60vh}
+    .scenarios{margin-left:0;border-left:0;border-top:1px solid var(--line);width:100%}
+  }
+</style>
+</head>
+<body>
+<div style="position:fixed;top:0;right:0;z-index:99;padding:10px 14px"><a href="/" style="font-family:IBM Plex Mono,monospace;font-size:11px;color:#8E9299;text-decoration:none;border:1px solid #2C333D;border-radius:4px;padding:6px 11px;background:#1D222A">&larr; back to sandglass</a></div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M4 2h14M4 20h14" stroke="#D6C4A6" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        <path d="M6 2.8c0 4.4 5 6.6 5 8.2s-5 3.8-5 8.2M16 2.8c0 4.4-5 6.6-5 8.2s5 3.8 5 8.2"
+              stroke="#8A7C66" stroke-width="1.4" fill="none"/>
+        <path d="M8.4 16.6c0-1.8 5.2-1.8 5.2 0v2.2H8.4z" fill="#D6C4A6"/>
+      </svg>
+      <div>
+        <h1>Sandglass</h1>
+        <div class="sub">Wasmer sandbox control plane</div>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <span class="k">Fleet</span>
+        <span class="v" id="k-fleet">5<small> / 5 healthy</small></span>
+      </div>
+      <div class="kpi">
+        <span class="k">Sandboxes / s</span>
+        <span class="v" id="k-rate">1,248</span>
+      </div>
+      <div class="kpi" id="k-den-wrap">
+        <span class="k">Denials / min</span>
+        <span class="v" id="k-den">6</span>
+        <svg class="spark" id="spark" width="104" height="14" viewBox="0 0 104 14" aria-hidden="true">
+          <polyline id="sparkline" fill="none" stroke="#8E9299" stroke-width="1.3"
+                    stroke-linejoin="round" points=""/>
+        </svg>
+      </div>
+      <div class="kpi">
+        <span class="k">Pending quorum</span>
+        <span class="v" id="k-q">1</span>
+      </div>
+      <div class="kpi">
+        <span class="k">Audit chain</span>
+        <span class="v" id="k-chain" style="color:var(--allow)">verified</span>
+      </div>
+    </div>
+
+    <div class="scenarios">
+      <span class="lbl">Scenario</span>
+      <button class="sbtn" id="s-normal" aria-pressed="true">Normal ops</button>
+      <button class="sbtn danger" id="s-comp" aria-pressed="false">Compromise node-02</button>
+      <button class="sbtn danger" id="s-part" aria-pressed="false">Partition</button>
+      <button class="sbtn danger" id="s-lock" aria-pressed="false">Safety lockout</button>
+      <button class="sbtn" id="s-pause" aria-pressed="false">Pause</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT RAIL -->
+    <aside class="pane rail">
+      <div class="pane-h"><h2>Edge nodes</h2><h2 id="cellname">cell&nbsp;A</h2></div>
+      <div class="pane-b">
+        <div class="nodes" id="nodes"></div>
+        <div class="pane-h" style="border-top:1px solid var(--line-soft)"><h2>Pending quorum</h2></div>
+        <div id="quorum"></div>
+        <p class="railnote">
+          Demo fleet is <b>5 nodes</b>. Quorum is <b>3-of-5</b> over a fixed committee, so
+          per-action cost stays constant as the fleet grows; policy and audit propagate by gossip.
+          At scale this rail groups nodes into cells and ranks them by denial rate.
+        </p>
+      </div>
+    </aside>
+
+    <!-- CENTER STREAM -->
+    <section class="pane">
+      <div class="pane-h">
+        <h2>Live action stream</h2>
+        <div class="filters">
+          <button class="chip" data-f="all" aria-pressed="true">All</button>
+          <button class="chip" data-f="DENY" aria-pressed="false">Denials</button>
+          <button class="chip" data-f="HELD" aria-pressed="false">Held</button>
+        </div>
+      </div>
+      <div class="alert" id="alert">
+        <b>Denial-rate anomaly</b>
+        <span class="who" id="alert-who">node-02</span>
+        <span id="alert-txt">— agent probing for ungranted capabilities. Sandbox held the boundary.</span>
+      </div>
+      <div class="streamwrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th><th>Node</th><th>Agent</th><th>Action</th>
+              <th>Decision</th><th>Reason</th><th>Quorum</th><th>Seq</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- RIGHT DETAIL -->
+    <aside class="pane detail">
+      <div class="pane-h"><h2>Event detail</h2></div>
+      <div class="pane-b">
+        <div class="d-sec">
+          <div class="d-title" id="d-title">—</div>
+          <dl class="kv">
+            <dt>Node</dt><dd id="d-node">—</dd>
+            <dt>Role</dt><dd id="d-role">—</dd>
+            <dt>Agent</dt><dd id="d-agent">—</dd>
+            <dt>Decision</dt><dd id="d-dec">—</dd>
+            <dt>Reason</dt><dd class="dim" id="d-reason">—</dd>
+            <dt>Signers</dt><dd class="dim" id="d-signers">—</dd>
+          </dl>
+        </div>
+        <div class="d-sec">
+          <h2 style="margin:0;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted-2)">
+            Sandbox capabilities
+          </h2>
+          <div class="caps" id="d-caps"></div>
+        </div>
+        <div class="pane-h"><h2>Target state</h2></div>
+        <div class="targets" id="targets"></div>
+        <div class="acts">
+          <button class="abtn" id="b-quar">Quarantine node</button>
+          <button class="abtn crit" id="b-rev">Revoke role</button>
+        </div>
+        <div class="chain">
+          <span>✓ hash chain intact</span>
+          <span class="sq" id="d-seq">seq 0x0000</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var NODES = [
+    {id:"node-01", role:"operator",   state:"ok", denials:0, pkgs:"node/node",              net:"host: relay.base", mounts:"/repo (ReadWrite)"},
+    {id:"node-02", role:"monitor",    state:"ok", denials:0, pkgs:"python/python@=3.13.18", net:false,              mounts:"none"},
+    {id:"node-03", role:"supervisor", state:"ok", denials:0, pkgs:"python/python@=3.13.18", net:false,              mounts:"/state (ReadOnly)"},
+    {id:"node-04", role:"supervisor", state:"ok", denials:0, pkgs:"python/python@=3.13.18", net:false,              mounts:"/state (ReadOnly)"},
+    {id:"node-05", role:"field",      state:"ok", denials:0, pkgs:"node/node",              net:false,              mounts:"/state (ReadOnly)"}
+  ];
+
+  var TARGETS = [
+    {name:"breaker-B", state:"CLOSED"},
+    {name:"breaker-C", state:"OPEN"},
+    {name:"feeder-A",  state:"CLOSED"}
+  ];
+
+  var BENIGN = [
+    {a:"fs.read",     t:"/workspace/state.json",   r:"mounted ReadOnly"},
+    {a:"proc.spawn",  t:"python /workspace/agent.py", r:"package present"},
+    {a:"fs.write",    t:"/workspace/out/plan.json",r:"workspace is ReadWrite"},
+    {a:"pkg.install", t:"jsonschema",              r:"in role allowlist"},
+    {a:"sign",        t:"telemetry-batch",         r:"policy match"},
+    {a:"fs.read",     t:"/workspace/topology.yml", r:"mounted ReadOnly"},
+    {a:"proc.spawn",  t:"node /workspace/check.js",r:"package present"}
+  ];
+
+  var ATTACK = [
+    {a:"net.connect", t:"api.exfil-relay.sh:443",  r:"capability not granted for role=monitor"},
+    {a:"fs.read",     t:"/keys/node.ed25519",      r:"resource out of scope — fs.read limited to state.json, workspace/**"},
+    {a:"grid.actuate",t:"breaker-B",               r:"capability not granted for role=monitor"},
+    {a:"funds.transfer", t:"acct-9931",            r:"capability not granted for role=monitor"},
+    {a:"pkg.install", t:"curl",                    r:"capability not granted for role=monitor"},
+    {a:"fs.read",     t:"/etc/sandglass/policy.d", r:"resource out of scope — fs.read limited to state.json, workspace/**"}
+  ];
+
+  var AGENTS = ["codegen","ctrl-loop","telemetry","planner","patcher"];
+
+  var seq = 0x4a10, rows = [], filter = "all", paused = false, mode = "normal";
+  var selected = null, denialHist = [4,5,3,6,4,5,6,4,5,3,5,6], quorums = [];
+  var tbody   = document.getElementById("tbody");
+
+  function $(id){ return document.getElementById(id); }
+  function node(id){ for(var i=0;i<NODES.length;i++){ if(NODES[i].id===id) return NODES[i]; } return NODES[0]; }
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+  function hex(n){ return "0x"+n.toString(16); }
+
+  function clock(){
+    var d = new Date();
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"
+         + String(d.getSeconds()).padStart(2,"0")+"."+String(d.getMilliseconds()).padStart(3,"0");
+  }
+
+  /* ---------- event construction ---------- */
+  function makeEvent(){
+    var n, spec, dec;
+    if(mode==="compromise" && Math.random() < 0.62){
+      n = node("node-02"); spec = pick(ATTACK); dec = "DENY";
+    } else if(mode==="partition" && Math.random() < 0.34){
+      n = node("node-05");
+      spec = Math.random()<0.5
+        ? {a:"policy.apply", t:"manifest v7", r:"policy version regression — node holds v12"}
+        : {a:"grid.actuate", t:"breaker-C",  r:"quorum unreachable — node partitioned"};
+      dec = "DENY";
+    } else {
+      var live = NODES.filter(function(x){ return x.state!=="part" && x.state!=="quar"; });
+      n = pick(live.length ? live : NODES);
+      spec = pick(BENIGN); dec = "ALLOW";
+    }
+    seq += 1 + Math.floor(Math.random()*3);
+    return {
+      ts: clock(), node: n.id, role: n.role, agent: pick(AGENTS),
+      action: spec.a, target: spec.t, decision: dec, reason: spec.r,
+      quorum: null, signers: dec==="ALLOW" ? "—" : "—", seq: hex(seq)
+    };
+  }
+
+  function makeQuorum(){
+    var need = 3, have = (mode==="partition") ? 1 : 3;
+    seq += 2;
+    var ev = {
+      ts: clock(), node:"node-01", role:"operator", agent:"ctrl-loop",
+      action:"grid.actuate", target:"breaker-B",
+      decision: have>=need ? "ALLOW" : "HELD",
+      reason: have>=need ? "quorum reached, host performed action"
+                         : "awaiting quorum — 2 committee members unreachable",
+      quorum: have+"/"+need,
+      signers: have>=need ? "node-01, node-03, node-04" : "node-01",
+      seq: hex(seq)
+    };
+    quorums = have>=need ? [] : [{name:"breaker-B", have:have, need:need}];
+    if(have>=need){
+      var t = TARGETS[0];
+      t.state = t.state==="CLOSED" ? "OPEN" : "CLOSED";
+    }
+    return ev;
+  }
+
+  /* ---------- rendering ---------- */
+  function push(ev){
+    rows.unshift(ev);
+    if(rows.length > 140) rows.pop();
+    if(ev.decision==="DENY"){
+      var n = node(ev.node); n.denials++;
+      if(n.id==="node-02" && mode==="compromise") n.state = "warn";
+    }
+    renderStream(true);
+    renderNodes();
+    renderQuorum();
+    renderKpis();
+  }
+
+  function rowHtml(ev, fresh){
+    var cls = ev.decision.toLowerCase() + (fresh ? " fresh" : "");
+    var sel = (selected && selected.seq===ev.seq) ? ' aria-selected="true"' : "";
+    return '<tr class="'+cls+'" data-seq="'+ev.seq+'"'+sel+'>'
+      + '<td class="t">'+ev.ts+'</td>'
+      + '<td class="n">'+ev.node+'</td>'
+      + '<td class="n">'+ev.agent+'</td>'
+      + '<td class="a">'+ev.action+' <em>'+ev.target+'</em></td>'
+      + '<td><span class="tag '+ev.decision+'">'+ev.decision+'</span></td>'
+      + '<td class="r">'+ev.reason+'</td>'
+      + '<td class="t">'+(ev.quorum||"—")+'</td>'
+      + '<td class="t">'+ev.seq+'</td>'
+      + '</tr>';
+  }
+
+  function renderStream(fresh){
+    var list = rows.filter(function(r){ return filter==="all" || r.decision===filter; });
+    var html = "";
+    for(var i=0;i<list.length;i++){ html += rowHtml(list[i], fresh && i===0); }
+    tbody.innerHTML = html;
+  }
+
+  function renderNodes(){
+    var healthy = 0, html = "";
+    for(var i=0;i<NODES.length;i++){
+      var n = NODES[i];
+      if(n.state==="ok") healthy++;
+      var cls = n.state==="warn" ? "warn" : n.state==="part" ? "part" : n.state==="quar" ? "quar" : "";
+      var right = n.state==="part" ? '<span class="st">partition</span>'
+                : n.state==="quar" ? '<span class="st">quarantined</span>'
+                : '<span class="ct">'+n.denials+' deny</span>';
+      html += '<button class="node '+cls+'" data-node="'+n.id+'" aria-pressed="false">'
+            + '<span class="dot"></span>'
+            + '<span><span class="nm">'+n.id+'</span><br><span class="rl">'+n.role+'</span></span>'
+            + right + '</button>';
+    }
+    $("nodes").innerHTML = html;
+    $("k-fleet").innerHTML = NODES.length+'<small> / '+healthy+' healthy</small>';
+  }
+
+  function renderQuorum(){
+    if(!quorums.length){ $("quorum").innerHTML = '<p class="qempty">No actions awaiting signatures.</p>'; return; }
+    var html = "";
+    for(var i=0;i<quorums.length;i++){
+      var q = quorums[i], bars = "";
+      for(var j=0;j<q.need;j++){ bars += '<i class="'+(j<q.have?"on":"")+'"></i>'; }
+      html += '<div class="q'+(q.have<q.need?" stalled":"")+'">'
+            + '<div class="qt"><span class="qn">grid.actuate '+q.name+'</span>'
+            + '<span class="qc">'+q.have+'/'+q.need+'</span></div>'
+            + '<div class="bar">'+bars+'</div></div>';
+    }
+    $("quorum").innerHTML = html;
+  }
+
+  function renderKpis(){
+    var dm = denialHist[denialHist.length-1];
+    $("k-den").textContent = dm;
+    $("k-den-wrap").className = "kpi" + (dm>25 ? " alarm" : "");
+    $("k-q").textContent = quorums.length;
+    $("k-rate").textContent = (1180 + Math.floor(Math.random()*160)).toLocaleString();
+    var max = Math.max.apply(null, denialHist), pts = [];
+    for(var i=0;i<denialHist.length;i++){
+      var x = (i/(denialHist.length-1))*102 + 1;
+      var y = 13 - (denialHist[i]/Math.max(max,1))*11;
+      pts.push(x.toFixed(1)+","+y.toFixed(1));
+    }
+    var line = $("sparkline");
+    line.setAttribute("points", pts.join(" "));
+    line.setAttribute("stroke", dm>25 ? "#F0595F" : "#8E9299");
+  }
+
+  function renderTargets(){
+    var html = "";
+    for(var i=0;i<TARGETS.length;i++){
+      var t = TARGETS[i];
+      html += '<div class="tg"><span class="tn">'+t.name+'</span>'
+            + '<span class="tv '+t.state.toLowerCase()+'">'+t.state+'</span></div>';
+    }
+    $("targets").innerHTML = html;
+  }
+
+  function capsHtml(ev){
+    var n = node(ev.node);
+    var netLine = n.net
+      ? '<span class="key">network</span>:  <span class="on">"host"</span>'
+      : '<span class="key">network</span>:  <span class="off">"disabled"</span>  <span class="cm">// socket() -> Errno 58</span>';
+    return 'await wasmer.create_sandbox(\n'
+      + '  <span class="key">packages</span>=["'+n.pkgs+'"],\n'
+      + '  <span class="key">files</span>={"state.json": ...},   <span class="cm">// the ONLY fs</span>\n'
+      + '  '+netLine+'\n'
+      + ')\n'
+      + '<span class="cm">// no mounts param exists: the host filesystem</span>\n'
+      + '<span class="cm">// is unreachable. /keys -> Errno 44.</span>\n'
+      + '<span class="cm">// signing key + effector live in the host.</span>';
+  }
+
+  function select(ev){
+    selected = ev;
+    $("d-title").textContent = ev.action + "  " + ev.target;
+    $("d-node").textContent = ev.node;
+    $("d-role").textContent = ev.role;
+    $("d-agent").textContent = ev.agent;
+    var dec = $("d-dec");
+    dec.innerHTML = '<span class="tag '+ev.decision+'">'+ev.decision+'</span>';
+    $("d-reason").textContent = ev.reason;
+    $("d-signers").textContent = ev.signers;
+    $("d-caps").innerHTML = capsHtml(ev);
+    $("d-seq").textContent = "seq " + ev.seq;
+    renderStream(false);
+  }
+
+  /* ---------- interaction ---------- */
+  tbody.addEventListener("click", function(e){
+    var tr = e.target.closest("tr"); if(!tr) return;
+    var s = tr.getAttribute("data-seq");
+    for(var i=0;i<rows.length;i++){ if(rows[i].seq===s){ select(rows[i]); return; } }
+  });
+
+  $("nodes").addEventListener("click", function(e){
+    var b = e.target.closest(".node"); if(!b) return;
+    var id = b.getAttribute("data-node");
+    for(var i=0;i<rows.length;i++){ if(rows[i].node===id){ select(rows[i]); break; } }
+    var all = $("nodes").querySelectorAll(".node");
+    for(var j=0;j<all.length;j++){ all[j].setAttribute("aria-pressed", all[j]===b ? "true":"false"); }
+  });
+
+  var chips = document.querySelectorAll(".chip");
+  for(var c=0;c<chips.length;c++){
+    chips[c].addEventListener("click", function(){
+      for(var k=0;k<chips.length;k++){ chips[k].setAttribute("aria-pressed","false"); }
+      this.setAttribute("aria-pressed","true");
+      filter = this.getAttribute("data-f");
+      renderStream(false);
+    });
+  }
+
+  function setMode(m, btn){
+    mode = m;
+    var btns = [$("s-normal"), $("s-comp"), $("s-part"), $("s-lock")];
+    for(var i=0;i<btns.length;i++){ btns[i].setAttribute("aria-pressed", btns[i]===btn ? "true":"false"); }
+
+    for(var j=0;j<NODES.length;j++){ if(NODES[j].state!=="quar") NODES[j].state = "ok"; }
+    $("alert").classList.remove("on");
+
+    if(m==="compromise"){
+      node("node-02").state = "warn";
+      $("alert-who").textContent = "node-02";
+      $("alert-txt").textContent = "— agent probing for ungranted capabilities. Sandbox held the boundary; no action reached a target.";
+      $("alert").classList.add("on");
+    }
+    if(m==="lockout"){
+      $("alert-who").textContent = "breaker-B";
+      $("alert-txt").textContent = "— safety lockout set by a line crew. All 5 peers refuse to sign; quorum 0/3 and the breaker cannot move.";
+      $("alert").classList.add("on");
+      quorums = [{name:"breaker-B", have:0, need:3}];
+    }
+    if(m==="partition"){
+      node("node-05").state = "part";
+      $("alert-who").textContent = "node-05";
+      $("alert-txt").textContent = "— link lost and policy rollback attempted. Node rejected the downgrade and fails safe without quorum.";
+      $("alert").classList.add("on");
+      quorums = [{name:"breaker-B", have:1, need:3}];
+    } else if(m==="normal"){
+      quorums = [];
+    }
+    renderNodes(); renderQuorum(); renderKpis();
+  }
+
+  $("s-normal").addEventListener("click", function(){ setMode("normal", this); });
+  $("s-comp").addEventListener("click",   function(){ setMode("compromise", this); });
+  $("s-part").addEventListener("click",   function(){ setMode("partition", this); });
+  $("s-lock").addEventListener("click",   function(){ setMode("lockout", this); });
+  $("s-pause").addEventListener("click",  function(){
+    paused = !paused;
+    this.setAttribute("aria-pressed", paused ? "true":"false");
+    this.textContent = paused ? "Resume" : "Pause";
+  });
+
+  $("b-quar").addEventListener("click", function(){
+    var id = selected ? selected.node : "node-02";
+    node(id).state = "quar";
+    seq += 1;
+    push({ts:clock(), node:id, role:node(id).role, agent:"—", action:"admin.quarantine",
+          target:id, decision:"ALLOW", reason:"host stopped honoring signatures from this node",
+          quorum:null, signers:"admin", seq:hex(seq)});
+  });
+  $("b-rev").addEventListener("click", function(){
+    var id = selected ? selected.node : "node-02";
+    var n = node(id); n.pkgs = "—"; n.mounts = "none"; n.net = false;
+    seq += 1;
+    push({ts:clock(), node:id, role:n.role, agent:"—", action:"admin.revoke_role",
+          target:id, decision:"ALLOW", reason:"next sandbox for this node gets an empty capability set",
+          quorum:null, signers:"admin", seq:hex(seq)});
+  });
+
+  /* ---------- boot: seed a populated console ---------- */
+  for(var s=0;s<16;s++){ rows.push(makeEvent()); }
+  rows.push(makeQuorum());
+  rows.sort(function(){ return 0; });
+  renderStream(false); renderNodes(); renderQuorum(); renderKpis(); renderTargets();
+  select(rows[0]);
+
+  /* ---------- loops ---------- */
+  setInterval(function(){
+    if(paused) return;
+    push(makeEvent());
+    renderTargets();
+  }, 1100);
+
+  setInterval(function(){
+    if(paused) return;
+    push(makeQuorum());
+    renderTargets();
+  }, 9000);
+
+  setInterval(function(){
+    if(paused) return;
+    var base = mode==="compromise" ? 34 : mode==="partition" ? 14 : 5;
+    denialHist.push(base + Math.floor(Math.random()*8));
+    if(denialHist.length>12) denialHist.shift();
+    renderKpis();
+  }, 2200);
+})();
+</script>
+
+</body>
+</html>

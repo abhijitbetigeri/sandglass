@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sandglass</title>
+<meta name="description" content="Run AI agents on edge devices as if they're already compromised.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#0F1216; --surface:#161A20; --surface-2:#1D222A;
+    --line:#2C333D; --line-soft:#212730;
+    --text:#E9E6DF; --muted:#8E9299; --muted-2:#6B6F77;
+    --sand:#D6C4A6; --sand-dim:#8A7C66;
+    --allow:#3FBE8C; --deny:#F0595F; --held:#E9A93E;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --ui:"Archivo",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--ground);color:var(--text);
+    font-family:var(--ui);font-size:16px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px}
+  a{color:var(--sand)}
+  :focus-visible{outline:2px solid var(--sand);outline-offset:3px}
+
+  /* ---- nav ---- */
+  nav{border-bottom:1px solid var(--line);background:var(--surface)}
+  nav .wrap{display:flex;align-items:center;gap:14px;padding-top:15px;padding-bottom:15px}
+  nav svg{width:22px;height:22px;flex:none}
+  nav .nm{font-weight:700;font-size:17px;letter-spacing:-.01em}
+  nav .links{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+  nav .links a{
+    font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-decoration:none;
+    color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:6px 12px;
+    transition:color .15s,border-color .15s,background .15s;
+  }
+  nav .links a:hover{color:var(--text);border-color:var(--muted-2);background:var(--surface-2)}
+  nav .links a.key{background:var(--sand);border-color:var(--sand);color:#15181C;font-weight:600}
+
+  /* ---- hero ---- */
+  header{padding:86px 0 58px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--sand-dim);margin-bottom:22px;
+  }
+  h1{
+    margin:0;font-size:clamp(34px,5.4vw,60px);line-height:1.08;font-weight:700;
+    letter-spacing:-.025em;text-wrap:balance;max-width:16ch;
+  }
+  .lede{
+    margin:26px 0 0;font-size:clamp(17px,2vw,20px);color:var(--muted);
+    max-width:60ch;line-height:1.55;
+  }
+  .lede b{color:var(--text);font-weight:600}
+
+  /* ---- video ---- */
+  .video{margin:52px 0 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#000}
+  .video video{display:block;width:100%;height:auto}
+  .cap{
+    font-family:var(--mono);font-size:11.5px;color:var(--muted-2);
+    padding:11px 14px;background:var(--surface);border-top:1px solid var(--line-soft);
+  }
+
+  /* ---- sections ---- */
+  section{padding:62px 0;border-top:1px solid var(--line-soft)}
+  h2{
+    margin:0 0 10px;font-size:13px;font-family:var(--mono);font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--sand-dim);
+  }
+  .h3{margin:0 0 30px;font-size:clamp(22px,3vw,30px);font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+  p{max-width:66ch;color:var(--muted)}
+  p b{color:var(--text);font-weight:600}
+
+  /* ---- boundaries ---- */
+  .bounds{display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  @media(min-width:800px){.bounds{grid-template-columns:repeat(3,1fr)}}
+  .b{background:var(--surface);padding:24px}
+  .b .n{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted-2)}
+  .b .t{margin:9px 0 8px;font-weight:600;font-size:18px}
+  .b p{margin:0;font-size:14.5px;line-height:1.55}
+  .b.one .t{color:var(--allow)} .b.two .t{color:var(--held)} .b.three .t{color:var(--sand)}
+
+  /* ---- terminal ---- */
+  pre{
+    margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;
+    padding:20px 22px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.75;
+    color:var(--muted);
+  }
+  pre .c{color:var(--sand)} pre .d{color:var(--deny)} pre .h{color:var(--held)}
+  pre .a{color:var(--allow)} pre .m{color:var(--muted-2)}
+
+  /* ---- table ---- */
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:13.5px}
+  td{padding:13px 8px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+  td:last-child{text-align:right;color:var(--text)}
+  td:first-child{color:var(--muted)}
+  .ok{color:var(--allow)} .no{color:var(--deny)}
+
+  footer{padding:44px 0 66px;border-top:1px solid var(--line-soft);color:var(--muted-2);font-size:13.5px}
+  footer .wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  footer a{font-family:var(--mono);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <svg viewBox="0 0 22 22" aria-hidden="true">
+    <path d="M4 2h14M4 20h14" stroke="#D6C4A6" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    <path d="M6 2.8c0 4.4 5 6.6 5 8.2s-5 3.8-5 8.2M16 2.8c0 4.4-5 6.6-5 8.2s5 3.8 5 8.2" stroke="#8A7C66" stroke-width="1.4" fill="none"/>
+    <path d="M8.4 16.6c0-1.8 5.2-1.8 5.2 0v2.2H8.4z" fill="#D6C4A6"/>
+  </svg>
+  <span class="nm">Sandglass</span>
+  <span class="links">
+    <a href="#demo">Demo</a>
+    <a href="https://github.com/abhijitbetigeri/sandglass">GitHub</a>
+    <a class="key" href="/console/">Open the console</a>
+  </span>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="eyebrow">Capability control plane · AI Security Hackathon 2026</div>
+  <h1>Run AI agents on edge devices as if they're already compromised.</h1>
+  <p class="lede">
+    An agent on an edge device inherits that device's full authority. Prompt-inject it and
+    the attacker has the signing keys, the network, and the wire to the hardware — and out
+    there, <b>there is no cloud to call for help</b>. Sandglass gives the agent none of it.
+    It runs in a Wasmer sandbox with no network and no keys, so it <b>cannot act, only ask</b>.
+  </p>
+</div></header>
+
+<section id="demo" style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <div class="video">
+      <video controls preload="metadata" poster="poster.png">
+        <source src="sandglass-demo.mp4" type="video/mp4">
+        Your browser can't play embedded video.
+        <a href="sandglass-demo.mp4">Download the demo (3.5 MB)</a>.
+      </video>
+      <div class="cap">Demo — 1:49. Every terminal frame is real output from the running system.</div>
+    </div>
+  </div>
+</section>
+
+<section><div class="wrap">
+  <h2>How it works</h2>
+  <div class="h3">Three boundaries, each stopping a different attack.</div>
+  <div class="bounds">
+    <div class="b one">
+      <div class="n">BOUNDARY 1</div>
+      <div class="t">Wasmer sandbox</div>
+      <p>Stops a hijacked <b>application</b>. No network, no keys, no effector. The agent's
+      only way out is to print a JSON request on stdout.</p>
+    </div>
+    <div class="b two">
+      <div class="n">BOUNDARY 2</div>
+      <div class="t">3-of-5 quorum</div>
+      <p>Stops a captured <b>device</b>. Peers re-check each request against their own policy
+      and their own local facts before signing. One owned node can't act alone.</p>
+    </div>
+    <div class="b three">
+      <div class="n">BOUNDARY 3</div>
+      <div class="t">Host runtime</div>
+      <p>The only code that touches the real world. It holds the signing key and the
+      effector handle, outside the sandbox, and acts only after 1 and 2 both pass.</p>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>A hijacked agent, for real</h2>
+  <div class="h3">It tries everything. It gets nothing.</div>
+<pre><span class="c">$ python -m sandglass.host --role monitor --scenario attack</span>
+
+  <span class="d">DENY</span>   net.connect     api.exfil-relay.sh:443
+         <span class="m">capability not granted for role=monitor</span>
+  <span class="d">DENY</span>   fs.read         /keys/node.ed25519
+         <span class="m">resource out of scope — fs.read limited to workspace/**</span>
+  <span class="d">DENY</span>   grid.actuate    breaker-B
+         <span class="m">capability not granted for role=monitor</span>
+  <span class="d">DENY</span>   funds.transfer  acct-9931
+         <span class="m">capability not granted for role=monitor</span>
+
+  <span class="a">audit chain verified=True</span>
+  <span class="a">effector state: {'breaker-B': 'CLOSED'}</span></pre>
+
+  <p style="margin-top:30px">And the case a sandbox alone cannot solve — a line crew has set a
+  safety tag the local node doesn't know about, but its peers do:</p>
+
+<pre><span class="c">$ python -m sandglass.host --role operator --quorum --lockout breaker-B</span>
+
+  <span class="h">HELD</span>   grid.actuate    breaker-B
+         <span class="m">held at 0/3</span>
+         <span class="m">peer-01 refused (safety lockout active on breaker-B)</span>
+         <span class="m">peer-02 refused (safety lockout active on breaker-B)</span>
+         <span class="m">peer-03 refused (safety lockout active on breaker-B)</span>
+
+  <span class="a">effector state: {'breaker-B': 'CLOSED'}</span></pre>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Measured, not claimed</h2>
+  <div class="h3">Probed against a live sandbox and a real fleet.</div>
+  <table>
+    <tr><td>Warm sandbox creation</td><td class="ok">~0.4 ms</td></tr>
+    <tr><td>socket.create_connection inside the sandbox</td><td class="no">OSError [Errno 58]</td></tr>
+    <tr><td>Reading /keys/node.ed25519 from the guest</td><td class="no">FileNotFoundError [44]</td></tr>
+    <tr><td>5-node Tenki microVM fleet, hijacked agent</td><td class="ok">18 denials · $0.002</td></tr>
+  </table>
+  <p style="margin-top:26px">Network denial and host-filesystem invisibility are the
+  <b>default state</b>, not something you configure. The 0.4 ms figure is what makes a fresh
+  sandbox per action affordable.</p>
+</div></section>
+
+<footer><div class="wrap">
+  <span>Sandglass · built at the AI Security Hackathon, San Francisco</span>
+  <a href="/console/">Console</a>
+  <a href="https://github.com/abhijitbetigeri/sandglass">Source</a>
+  <a href="sandglass-demo.mp4">Video</a>
+</div></footer>
+
+</body>
+</html>

@@ -11,6 +11,10 @@ network and no keys mounted, so it **cannot act — only request**. A host proce
 every request against a signed capability manifest, and irreversible actions
 additionally require 3-of-5 peer signatures. All enforced locally, offline.
 
+**[sandglass.wasmer.app](https://sandglass.wasmer.app)** — landing page and 1:49 demo video
+· **[/console](https://sandglass.wasmer.app/console/)** — live admin console
+· hosted on Wasmer Edge
+
 Built for the AI Security Hackathon, San Francisco, 13 September 2026.
 
 ---
@@ -116,6 +120,34 @@ Launch a real fleet on Tenki microVMs (needs `TENKI_API_KEY`):
 .venv/bin/python fleet/launch_tenki.py --nodes 5 --scenario benign   # the legit path
 ```
 
+### Boundary 2 — the committee
+
+```bash
+# happy path: 5 of 5 peers sign, the breaker actually moves
+.venv/bin/python -m sandglass.host --role operator --scenario benign --quorum
+
+# a line crew set a safety tag the local node doesn't know about
+.venv/bin/python -m sandglass.host --role operator --scenario benign --quorum \
+    --lockout breaker-B
+
+# partitioned: 2 of 3, fails safe rather than splitting the brain
+.venv/bin/python -m sandglass.host --role operator --scenario benign --quorum \
+    --partition peer-01,peer-02,peer-03
+```
+
+| Scene | Quorum | Breaker |
+|---|---|---|
+| happy path | 5/5 | CLOSED → **OPEN** |
+| safety lockout | 0/3 | stays CLOSED |
+| partition | 2/3 | stays CLOSED |
+| hijacked agent | — | stays CLOSED |
+
+### Rebuild the demo video
+
+```bash
+.venv/bin/python demo/make_video.py      # -> demo/sandglass-demo.mp4
+```
+
 ---
 
 ## Layout
@@ -128,7 +160,10 @@ Launch a real fleet on Tenki microVMs (needs `TENKI_API_KEY`):
 | `sandglass/effector.py` | The only code that touches the real world |
 | `sandglass/audit.py` | Hash-chained append-only log, written by the host |
 | `guest/agent.py` | The **untrusted** guest — assume every line is attacker-controlled |
+| `sandglass/quorum.py` | Boundary 2: Ed25519 committee, peers sign on their own authority |
 | `fleet/launch_tenki.py` | Launches the fleet on Tenki microVMs |
+| `dashboard/` | The landing page and console deployed to Wasmer Edge |
+| `demo/make_video.py` | Renders the demo video with a `say` voiceover |
 
 ---
 
@@ -149,11 +184,10 @@ Corrections found while building, against the published docs:
 
 ## Honest limitations
 
-- Capabilities are scoped per **action**, not yet per **resource**, so
-  `fs.read /keys/...` returns ALLOW even though the path is unreachable inside the
-  sandbox. Path scoping is the next fix.
-- The quorum protocol is not implemented yet; irreversible actions correctly fail
-  safe as `HELD`.
+- Peer keys are derived from a fixed demo seed. A real deployment provisions them at
+  commissioning and never lets the private half leave the device.
+- The manifest carries a version and is rollback-resistant, but is not yet signature-verified
+  on load.
 - The sandbox does not stop an agent writing bad code. It guarantees the bad code's
   only path to production is a reviewable diff, and that secrets never leave.
 - Nothing protects you if the manifest signing key is stolen. That is the root of trust.

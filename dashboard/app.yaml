@@ -1,0 +1,5 @@
+kind: wasmer.io/App.v0
+name: sandglass
+owner: abhijitbetigeri
+package: .
+app_id: da_KGzIxtmUVkk8
