@@ -19,14 +19,14 @@ Built for the AI Security Hackathon, San Francisco, 13 September 2026.
 
 [![Watch the demo](https://sandglass.wasmer.app/poster.png)](https://sandglass.wasmer.app/sandglass-demo.mp4)
 
-▶ **[Watch the 1:49 demo with voiceover](https://sandglass.wasmer.app/sandglass-demo.mp4)**
+▶ **[Watch the 2:25 demo with voiceover](https://sandglass.wasmer.app/sandglass-demo.mp4)**
 
 Every terminal frame in it is real output from the running system, not a mockup.
 
 | | |
 |---|---|
 | **Landing page + embedded video** | **[sandglass.wasmer.app](https://sandglass.wasmer.app)** |
-| **Demo video** (1:49, voiceover, 3.5 MB) | [sandglass.wasmer.app/sandglass-demo.mp4](https://sandglass.wasmer.app/sandglass-demo.mp4) |
+| **Demo video** (2:25, voiceover, 4.9 MB) | [sandglass.wasmer.app/sandglass-demo.mp4](https://sandglass.wasmer.app/sandglass-demo.mp4) |
 | **Live admin console** | [sandglass.wasmer.app/console](https://sandglass.wasmer.app/console/) |
 | **Source** | [github.com/abhijitbetigeri/sandglass](https://github.com/abhijitbetigeri/sandglass) |
 
@@ -35,8 +35,15 @@ All of it is hosted on **Wasmer Edge**. The video also lives in this repo at
 `python demo/make_video.py`.
 
 What the video covers, in order: the problem, the three boundaries, a hijacked agent
-being denied everything it tries, the safety-lockout case that a sandbox alone cannot
-solve, and the measured numbers.
+being denied everything it tries, **the live console showing every one of those
+decisions**, the safety-lockout case that a sandbox alone cannot solve, the console
+again with quorum stalled at 0/3, and the measured numbers.
+
+The console footage is the real deployed page captured headlessly, not a mockup — you
+can load any of those states yourself:
+[`?scenario=compromise`](https://sandglass.wasmer.app/console/?scenario=compromise) ·
+[`?scenario=lockout`](https://sandglass.wasmer.app/console/?scenario=lockout) ·
+[`?scenario=partition`](https://sandglass.wasmer.app/console/?scenario=partition)
 
 ---
 
