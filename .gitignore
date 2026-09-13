@@ -1,0 +1,8 @@
+.env
+.env.local
+.venv/
+.wasmer/
+__pycache__/
+*.pyc
+audit.jsonl
+runs/

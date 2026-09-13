@@ -1,0 +1,58 @@
+# Sandglass capability manifest.
+# Signed and version-monotonic: a node refuses to apply a manifest whose
+# version is lower than the one it currently holds (rollback defense).
+version: 12
+issuer: sandglass-root
+committee_threshold: 3
+committee_size: 5
+
+# Agent workloads are pulled from the Wasmer registry by EXACT version.
+# Content-addressed + version-pinned = supply chain integrity.
+workloads:
+  grid-agent: "sandglass/grid-agent@=0.3.1"
+  codegen-agent: "sandglass/codegen-agent@=0.3.1"
+
+# Every action the host will ever perform. `irreversible` ones additionally
+# require committee quorum; an action absent from this list cannot be requested.
+actions:
+  fs.read:        { irreversible: false }
+  fs.write:       { irreversible: false }
+  proc.spawn:     { irreversible: false }
+  pkg.install:    { irreversible: false }
+  sign:           { irreversible: false }
+  net.connect:    { irreversible: false }
+  grid.actuate:   { irreversible: true }
+  funds.transfer: { irreversible: true }
+  deploy.push:    { irreversible: true }
+
+# role -> capability set. Resolves directly into Wasmer.create_sandbox().
+# `seed` is the ONLY filesystem the guest ever sees; there is no host mount.
+# `network: false` leaves NetworkPolicy.DISABLED, under which socket() fails.
+roles:
+  operator:
+    packages: ["python/python"]
+    network: false
+    seed:
+      "state.json": '{"breaker-B":"CLOSED","breaker-C":"OPEN"}'
+    allow: [fs.read, fs.write, proc.spawn, sign, grid.actuate]
+
+  supervisor:
+    packages: ["python/python"]
+    network: false
+    seed:
+      "state.json": '{"breaker-B":"CLOSED","breaker-C":"OPEN"}'
+    allow: [fs.read, sign]
+
+  # Deliberately minimal: a monitor may look, and nothing else.
+  monitor:
+    packages: ["python/python"]
+    network: false
+    allow: [fs.read]
+
+  # A coding agent: its repo, its runtime, the registry. Nothing else.
+  builder:
+    packages: ["python/python"]
+    network: host
+    seed:
+      "README.md": "# service under maintenance by the builder agent\n"
+    allow: [fs.read, fs.write, proc.spawn, pkg.install]
